@@ -823,6 +823,29 @@ class RayPPOTrainer:
         for k, v in success_rate.items():
             metric_dict[f'val/{k}'] = v
 
+        # === Overall success rate（按任务类型平均，与论文 Table 1 "All" 列一致） ===
+        per_task_sr = [
+            v for k, v in success_rate.items()
+            if 'success_rate' in k and k != 'success_rate'
+        ]
+        if per_task_sr:
+            metric_dict['val/overall_success_rate'] = np.mean(per_task_sr)
+
+        # === 平均 prompt 长度（tokens） ===
+        if sample_inputs:
+            prompt_token_lengths = [
+                len(self.tokenizer.encode(text)) for text in sample_inputs
+            ]
+            metric_dict['val/avg_prompt_length'] = np.mean(prompt_token_lengths)
+            metric_dict['val/max_prompt_length'] = np.max(prompt_token_lengths)
+
+        # === Skill Bank 大小监控 ===
+        if hasattr(self, 'envs') and hasattr(self.envs, 'retrieval_memory') and self.envs.retrieval_memory:
+            skill_count = self.envs.retrieval_memory.get_skill_count()
+            metric_dict['val/skill_bank_total'] = skill_count['total']
+            metric_dict['val/skill_bank_general'] = skill_count['general']
+            metric_dict['val/skill_bank_task_specific'] = skill_count['task_specific']
+
         # === Skill Bank 动态更新 ===
         if self.config.env.get('skills_only_memory', {}).get('enable_dynamic_update', False):
             self._update_skills_from_validation(
@@ -874,11 +897,12 @@ class RayPPOTrainer:
             print("[SkillUpdate] No failed trajectories found")
             return
 
-        # 初始化 SkillUpdater (lazy init, 使用 Azure OpenAI o3)
+        # 初始化 SkillUpdater (lazy init)
         if not hasattr(self, 'skill_updater'):
             from agent_system.memory.skill_updater import SkillUpdater
             self.skill_updater = SkillUpdater(
                 max_new_skills_per_update=update_config.get('max_new_skills', 3),
+                api_backend=update_config.get('api_backend', 'azure'),
             )
 
         # 获取当前 skills

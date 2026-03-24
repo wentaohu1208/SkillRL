@@ -1,17 +1,26 @@
 """
 LLM-based skill updater that generates new skills from failed trajectories.
-Uses Azure OpenAI o3 model for analysis.
 
-Required environment variables:
-    AZURE_OPENAI_API_KEY      – Azure OpenAI API key
-    AZURE_OPENAI_ENDPOINT     – Azure OpenAI endpoint URL
-    AZURE_OPENAI_API_VERSION  – API version (default: 2025-01-01-preview)
+Supports two API backends (controlled by ``api_backend`` constructor arg):
+
+  - ``"azure"`` (default): Uses Azure OpenAI.
+    Required env vars: AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT
+    Optional env var:  AZURE_OPENAI_API_VERSION (default: 2025-01-01-preview)
+
+  - ``"openai"``: Uses any OpenAI-compatible API (e.g. DeepSeek, vLLM, etc.).
+    Required env vars: SKILL_API_KEY
+    Optional env vars: SKILL_BASE_URL (default: https://api.openai.com/v1)
+                       SKILL_MODEL   (default: deepseek-chat)
 """
 import json
+import logging
 import os
 import re
-from typing import List, Dict, Any, Optional
-from openai import AzureOpenAI
+from typing import List, Dict, Optional
+
+from openai import AzureOpenAI, OpenAI
+
+logger = logging.getLogger(__name__)
 
 
 class SkillUpdater:
@@ -19,24 +28,60 @@ class SkillUpdater:
         self,
         max_new_skills_per_update: int = 3,
         max_completion_tokens: int = 2048,
+        api_backend: str = "azure",
     ):
-        # Read credentials from environment variables — never hardcode secrets.
-        api_key = os.environ.get("AZURE_OPENAI_API_KEY")
-        endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-        api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
-
-        if not api_key or not endpoint:
-            raise EnvironmentError(
-                "SkillUpdater requires AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT "
-                "environment variables to be set."
+        """
+        Args:
+            max_new_skills_per_update: Cap on new skills per evolution cycle.
+            max_completion_tokens:     Token budget for the LLM response.
+            api_backend:               ``"azure"`` or ``"openai"``.
+        """
+        if api_backend not in ("azure", "openai"):
+            raise ValueError(
+                f"api_backend must be 'azure' or 'openai', got '{api_backend}'"
             )
 
-        self.client = AzureOpenAI(
-            api_key=api_key,
-            azure_endpoint=endpoint,
-            api_version=api_version,
+        self.api_backend = api_backend
+
+        if api_backend == "azure":
+            api_key = os.environ.get("AZURE_OPENAI_API_KEY")
+            endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
+            api_version = os.environ.get(
+                "AZURE_OPENAI_API_VERSION", "2025-01-01-preview"
+            )
+            if not api_key or not endpoint:
+                raise EnvironmentError(
+                    "SkillUpdater (azure backend) requires AZURE_OPENAI_API_KEY "
+                    "and AZURE_OPENAI_ENDPOINT environment variables."
+                )
+            self.client = AzureOpenAI(
+                api_key=api_key,
+                azure_endpoint=endpoint,
+                api_version=api_version,
+            )
+            self.model = "o3"
+        else:
+            api_key = os.environ.get("SKILL_API_KEY")
+            base_url = os.environ.get(
+                "SKILL_BASE_URL", "https://api.openai.com/v1"
+            )
+            model = os.environ.get("SKILL_MODEL", "deepseek-chat")
+            if not api_key:
+                raise EnvironmentError(
+                    "SkillUpdater (openai backend) requires SKILL_API_KEY "
+                    "environment variable."
+                )
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url,
+            )
+            self.model = model
+
+        logger.info(
+            "[SkillUpdater] Initialized with backend=%s, model=%s",
+            api_backend,
+            self.model,
         )
-        self.model = "o3"
         self.max_completion_tokens = max_completion_tokens
         self.max_new_skills_per_update = max_new_skills_per_update
         self.update_history = []
@@ -93,7 +138,7 @@ class SkillUpdater:
             return reassigned[:self.max_new_skills_per_update]
 
         except Exception as e:
-            print(f"[SkillUpdater] Error calling o3: {e}")
+            logger.error("[SkillUpdater] Error calling %s: %s", self.model, e)
             return []
 
     # ------------------------------------------------------------------ #
@@ -200,7 +245,7 @@ Example format:
                     if all(k in s for k in ['skill_id', 'title', 'principle'])
                 ]
         except json.JSONDecodeError as e:
-            print(f"[SkillUpdater] JSON parse error: {e}")
+            logger.error("[SkillUpdater] JSON parse error: %s", e)
         return []
 
     def get_update_summary(self) -> Dict:
