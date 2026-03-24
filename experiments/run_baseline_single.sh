@@ -73,7 +73,7 @@ python3 -m verl.trainer.main_ppo \
     actor_rollout_ref.rollout.enable_chunked_prefill=True \
     actor_rollout_ref.rollout.enforce_eager=True \
     actor_rollout_ref.rollout.free_cache_engine=False \
-    actor_rollout_ref.rollout.max_num_batched_tokens=4096 \
+    actor_rollout_ref.rollout.max_num_batched_tokens=8192 \
     actor_rollout_ref.rollout.max_num_seqs=256 \
     actor_rollout_ref.rollout.val_kwargs.temperature=0.4 \
     actor_rollout_ref.rollout.val_kwargs.do_sample=True \
