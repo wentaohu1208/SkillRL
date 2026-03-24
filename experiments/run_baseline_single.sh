@@ -95,7 +95,7 @@ python3 -m verl.trainer.main_ppo \
     +env.skills_only_memory.max_new_skills=3 \
     +env.skills_only_memory.api_backend=$API_BACKEND \
     trainer.critic_warmup=0 \
-    trainer.logger=['console','wandb'] \
+    trainer.logger=['console','tensorboard'] \
     trainer.project_name='skillrl_scaling_experiment' \
     trainer.experiment_name='g1_baseline_single_gpu' \
     trainer.n_gpus_per_node=1 \
