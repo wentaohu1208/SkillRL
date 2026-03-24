@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Training outputs
+outputs/
+checkpoints/
+wandb/
+*.ckpt
+*.pt
+*.pth
+
+# Logs
+*.log
+logs/
+
+# Data (too large for git)
+*.parquet
+*.zip
+
+# Experiment artifacts
+experiments/outputs/
+updated_skills_step*.json
+
+# Draft planning files
+draft/
