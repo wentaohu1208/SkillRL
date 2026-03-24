@@ -18,6 +18,7 @@ shift || true
 export VLLM_ATTENTION_BACKEND=FLASH_ATTN
 export RAY_BACKEND_LOG_LEVEL=debug
 export VLLM_LOGGING_LEVEL=DEBUG
+export HF_ENDPOINT=https://hf-mirror.com
 
 # ---------- Wandb ----------
 export WANDB_NAME="g1_baseline_reproduce"
