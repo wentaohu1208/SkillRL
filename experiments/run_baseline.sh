@@ -15,6 +15,12 @@ set -x
 ENGINE=${1:-vllm}
 shift || true
 
+# ---------- 加载环境变量（API 密钥等） ----------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    source "$SCRIPT_DIR/.env"
+fi
+
 export VLLM_ATTENTION_BACKEND=FLASH_ATTN
 export RAY_BACKEND_LOG_LEVEL=debug
 export VLLM_LOGGING_LEVEL=DEBUG
