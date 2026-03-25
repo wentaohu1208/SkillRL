@@ -36,7 +36,7 @@ group_size=8
 num_cpus_per_env_worker=0.1
 
 # ---------- 准备 dummy parquet ----------
-python3 -m examples.data_preprocess.prepare \
+python3 -m examples.data_preprocess.prepare_offline \
     --mode 'text' \
     --train_data_size $train_data_size \
     --val_data_size $val_data_size
@@ -101,7 +101,7 @@ python3 -m verl.trainer.main_ppo \
     +env.skills_only_memory.max_new_skills=3 \
     +env.skills_only_memory.api_backend=$API_BACKEND \
     trainer.critic_warmup=0 \
-    trainer.logger=['console','wandb'] \
+    trainer.logger=['console','tensorboard'] \
     trainer.project_name='skillrl_scaling_experiment' \
     trainer.experiment_name='g1_baseline_reproduce' \
     trainer.n_gpus_per_node=4 \

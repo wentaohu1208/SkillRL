@@ -31,7 +31,7 @@ group_size=8
 num_cpus_per_env_worker=0.1
 
 # ---------- 准备 dummy parquet ----------
-python3 -m examples.data_preprocess.prepare \
+python3 -m examples.data_preprocess.prepare_offline \
     --mode 'text' \
     --train_data_size $train_data_size \
     --val_data_size $val_data_size
